@@ -9,7 +9,6 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.List;
 
 import hudson.EnvVars;
 import hudson.model.AbstractBuild;
@@ -20,7 +19,7 @@ import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.scm.ChangeLogSet;
-import jenkins.plugins.office365connector.helpers.AffectedFileBuilder;
+import jenkins.plugins.office365connector.helpers.AffectedFilesBuilder;
 import jenkins.plugins.office365connector.helpers.ClassicDisplayURLProviderBuilder;
 import jenkins.plugins.office365connector.helpers.HttpWorkerAnswer;
 import jenkins.plugins.office365connector.helpers.WebhookBuilder;
@@ -149,8 +148,8 @@ public class Office365ConnectorWebhookNotifierIntegrationTest {
     }
 
     private void mockGetChangeSets() {
-        List<ChangeLogSet> files = new AffectedFileBuilder().sampleFiles(run);
-        when(run.getChangeSets()).thenReturn(files);
+        ChangeLogSet<? extends ChangeLogSet.Entry> sets = new AffectedFilesBuilder().sampleChangeLogSet();
+        when(run.getChangeSet()).thenReturn(sets);
     }
 
     private void mockTimeUtils() {

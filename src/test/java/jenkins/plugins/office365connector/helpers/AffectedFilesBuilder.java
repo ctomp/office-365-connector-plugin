@@ -5,19 +5,16 @@ import static org.powermock.api.mockito.PowerMockito.when;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
-import hudson.model.AbstractBuild;
 import hudson.model.User;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.EditType;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
  * @author Damian Szczepanik (damianszczepanik@github)
  */
-public class AffectedFileBuilder {
+public class AffectedFilesBuilder {
 
     private static final String DEVELOPER_NAME = "Mike";
 
@@ -34,7 +31,7 @@ public class AffectedFileBuilder {
         }
     }
 
-    public List<ChangeLogSet> sampleFiles(AbstractBuild run) {
+    public ChangeLogSet<? extends ChangeLogSet.Entry> sampleChangeLogSet() {
         ChangeLogSet.Entry entry = mock(ChangeLogSet.Entry.class);
         User user = mockUser();
         when(entry.getAuthor()).thenReturn(user);
@@ -42,7 +39,9 @@ public class AffectedFileBuilder {
         Collection<? extends ChangeLogSet.AffectedFile> files = Arrays.asList(new File(), new File());
         when(entry.getAffectedFiles()).thenAnswer(createAnswer(files));
 
-        return Arrays.<ChangeLogSet>asList(new ChangeLogSetBuilder(run, entry));
+        ChangeLogSet changeLogSet = mock(ChangeLogSet.class);
+        when(changeLogSet.iterator()).thenAnswer(createAnswer(Arrays.asList(entry).iterator()));
+        return changeLogSet;
     }
 
     private User mockUser() {
@@ -51,13 +50,7 @@ public class AffectedFileBuilder {
         return user;
     }
 
-    public static <T> Answer<T> createAnswer(final T value) {
-        Answer<T> dummy = new Answer<T>() {
-            @Override
-            public T answer(InvocationOnMock invocation) {
-                return value;
-            }
-        };
-        return dummy;
+    public static <T> Answer<T> createAnswer(T value) {
+        return (invocation -> value);
     }
 }

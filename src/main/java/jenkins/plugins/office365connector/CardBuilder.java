@@ -13,15 +13,10 @@
  */
 package jenkins.plugins.office365connector;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
+import hudson.model.AbstractBuild;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -194,41 +189,33 @@ public class CardBuilder {
     }
 
     private void addScmDetails() {
-        Set<User> users;
-        List<ChangeLogSet<ChangeLogSet.Entry>> sets;
-
-        try {
-            users = (Set<User>) run.getClass().getMethod("getCulprits").invoke(run);
-            sets = (List<ChangeLogSet<ChangeLogSet.Entry>>) run.getClass().getMethod("getChangeSets").invoke(run);
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            users = Collections.emptySet();
-            sets = Collections.emptyList();
+        if (!(run instanceof AbstractBuild)) {
+            return;
         }
+        AbstractBuild abstractBuild = (AbstractBuild) run;
+        factsBuilder.addCulprits(abstractBuild.getCulprits());
 
-        factsBuilder.addCulprits(users);
-
-        if (!sets.isEmpty()) {
-            Set<User> authors = new HashSet<>();
-            int filesCounter = 0;
-            if (Iterables.all(sets, Predicates.instanceOf(ChangeLogSet.class))) {
-                for (ChangeLogSet<ChangeLogSet.Entry> set : sets) {
-                    for (ChangeLogSet.Entry entry : set) {
-                        authors.add(entry.getAuthor());
-                        filesCounter += getAffectedFiles(entry).size();
-                    }
-                }
-            }
-            factsBuilder.addDevelopers(authors);
-            factsBuilder.addNumberOfFilesChanged(filesCounter);
+        ChangeLogSet<? extends ChangeLogSet.Entry> sets = abstractBuild.getChangeSet();
+        if (sets.isEmptySet()) {
+            return;
         }
+        Set<User> authors = new HashSet<>();
+        int filesCounter = 0;
+        for (ChangeLogSet.Entry entry : sets) {
+            authors.add(entry.getAuthor());
+            filesCounter += countAffectedFiles(entry);
+        }
+        factsBuilder.addDevelopers(authors);
+        factsBuilder.addNumberOfFilesChanged(filesCounter);
     }
 
-    private Collection<? extends ChangeLogSet.AffectedFile> getAffectedFiles(ChangeLogSet.Entry entry) {
+    private int countAffectedFiles(ChangeLogSet.Entry entry) {
         try {
-            return entry.getAffectedFiles();
+            return entry.getAffectedFiles().size();
         } catch (UnsupportedOperationException e) {
+            // countAffectedFiles() is not implemented by this scm
             log(e.getMessage());
-            return Collections.emptyList();
+            return 0;
         }
     }
 
